@@ -5,7 +5,11 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 SQLALCHEMY_DATABASE_URL = "sqlite:///./trip.db"
 
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    pool_size=10,  # Увеличьте pool_size
+    max_overflow=20  # Увеличьте max_overflow
+)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
