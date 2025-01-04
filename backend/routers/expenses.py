@@ -13,12 +13,14 @@ router = APIRouter(
 
 @router.get("/", response_model=list[schemas.Expense])
 def read_expenses(db: Session = Depends(get_db)):
+    """Получает список всех расходов."""
     expenses = db.query(models.Expense).all()
     return expenses
 
 
 @router.get("/{expense_id}", response_model=schemas.Expense)
 def read_expense(expense_id: int, db: Session = Depends(get_db)):
+    """Получает расход по ID."""
     expense = db.query(models.Expense).filter(
         models.Expense.id == expense_id).first()
     if not expense:
@@ -28,6 +30,7 @@ def read_expense(expense_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=schemas.Expense)
 def create_expense(expense: schemas.ExpenseCreate, db: Session = Depends(get_db)):
+    """Создает новый расход."""
     db_expense = models.Expense(**expense.dict())
     db.add(db_expense)
     db.commit()
@@ -37,6 +40,7 @@ def create_expense(expense: schemas.ExpenseCreate, db: Session = Depends(get_db)
 
 @router.put("/{expense_id}", response_model=schemas.Expense)
 def update_expense(expense_id: int, expense: schemas.ExpenseUpdate, db: Session = Depends(get_db)):
+    """Обновляет данные расхода."""
     db_expense = db.query(models.Expense).filter(
         models.Expense.id == expense_id).first()
     if not db_expense:
@@ -51,6 +55,7 @@ def update_expense(expense_id: int, expense: schemas.ExpenseUpdate, db: Session 
 
 @router.delete("/{expense_id}")
 def delete_expense(expense_id: int, db: Session = Depends(get_db)):
+    """Удаляет расход."""
     db_expense = db.query(models.Expense).filter(
         models.Expense.id == expense_id).first()
     if not db_expense:

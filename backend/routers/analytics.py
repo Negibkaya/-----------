@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from database import get_db
-from services import service_analytics
+from services import service_analytics, analytics_facade
+from services.report_factory import TextReportFactory, JSONReportFactory
 
 from typing import List, Dict, Any
 
@@ -53,22 +54,24 @@ def read_average_expense_per_trip(db: Session = Depends(get_db)):
 
 @router.get("/all_analytics")
 def read_all_analytics(db: Session = Depends(get_db)):
-    total_expenses = service_analytics.get_total_expenses(db)
-    expenses_by_employee = service_analytics.get_expenses_by_employee(db)
-    expenses_by_expense_type = service_analytics.get_expenses_by_expense_type(
-        db)
-    employees_with_most_trips = service_analytics.get_employees_with_most_trips(
-        db)
-    most_popular_destinations = service_analytics.get_most_popular_destinations(
-        db)
-    average_expense_per_trip = service_analytics.get_average_expense_per_trip(
-        db)
+    """Получить всю аналитику."""
+    facade = analytics_facade.AnalyticsFacade(db)
+    return facade.get_all_analytics_data()
 
-    return {
-        "total_expenses": total_expenses,
-        "expenses_by_employee": [{"employee": fio, "total_expenses": expenses} for fio, expenses in expenses_by_employee],
-        "expenses_by_expense_type": [{"expense_type": name, "total_expenses": expenses} for name, expenses in expenses_by_expense_type],
-        "employees_with_most_trips": [{"employee": fio, "trip_count": count} for fio, count in employees_with_most_trips],
-        "most_popular_destinations": [{"destination": destination, "trip_count": count} for destination, count in most_popular_destinations],
-        "average_expense_per_trip": average_expense_per_trip,
-    }
+
+@router.get("/report/{report_type}/{data_type}")
+def generate_report(report_type: str, data_type: str, db: Session = Depends(get_db)):
+    """Генерирует отчет указанного типа."""
+    if report_type == "text":
+        report_factory = TextReportFactory()
+    elif report_type == "json":
+        report_factory = JSONReportFactory()
+    else:
+        raise HTTPException(status_code=400, detail="Invalid report type")
+
+    facade = analytics_facade.AnalyticsFacade(db, report_factory)
+    try:
+        report = facade.generate_report(data_type)
+        return report
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

@@ -19,17 +19,11 @@ app.include_router(analytics.router)
 # Настройка CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # URL вашего frontend приложения
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.get("/")
-def read_root():
-    return {"Message": "test message (root) X2"}
-
 
 if __name__ == "__main__":
     uvicorn.run("main:app", reload=True)

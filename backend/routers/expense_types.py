@@ -12,12 +12,14 @@ router = APIRouter(
 
 @router.get("/", response_model=list[schemas.ExpenseType])
 def read_expense_types(db: Session = Depends(get_db)):
+    """Получает список всех типов расходов."""
     expense_types = db.query(models.ExpenseType).all()
     return expense_types
 
 
 @router.get("/{expense_type_id}", response_model=schemas.ExpenseType)
 def read_expense_type(expense_type_id: int, db: Session = Depends(get_db)):
+    """Получает тип расходов по ID."""
     db_expense_type = db.query(models.ExpenseType).filter(
         models.ExpenseType.id == expense_type_id).first()
     if db_expense_type is None:
@@ -27,6 +29,7 @@ def read_expense_type(expense_type_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=schemas.ExpenseType)
 def create_expense_type(expense_type: schemas.ExpenseTypeCreate, db: Session = Depends(get_db)):
+    """Создает новый тип расходов."""
     existing_expense_type = db.query(models.ExpenseType).filter(
         models.ExpenseType.name == expense_type.name).first()
     if existing_expense_type:
@@ -42,6 +45,7 @@ def create_expense_type(expense_type: schemas.ExpenseTypeCreate, db: Session = D
 
 @router.put("/{expense_type_id}", response_model=schemas.ExpenseType)
 def update_expense_type(expense_type_id: int, expense_type_update: schemas.ExpenseTypeUpdate, db: Session = Depends(get_db)):
+    """Обновляет данные типа расходов."""
     db_expense_type = db.query(models.ExpenseType).filter(
         models.ExpenseType.id == expense_type_id).first()
     if db_expense_type is None:
@@ -65,6 +69,7 @@ def update_expense_type(expense_type_id: int, expense_type_update: schemas.Expen
 
 @router.delete("/{expense_type_id}", response_model=schemas.ExpenseType)
 def delete_expense_type(expense_type_id: int, db: Session = Depends(get_db)):
+    """Удаляет тип расходов."""
     db_expense_type = db.query(models.ExpenseType).filter(
         models.ExpenseType.id == expense_type_id).first()
     if db_expense_type is None:

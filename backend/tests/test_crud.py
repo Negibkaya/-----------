@@ -9,16 +9,10 @@ import models
 import schemas
 from database import Base, get_db
 
-# Используем тестовую базу данных в файле внутри папки tests
-SQLALCHEMY_DATABASE_URL = "sqlite:///./tests/test_db.db"
+SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///./tests/test_db.db"
 
-# Если переменная окружения не задана, используем тестовую БД в файле
-if not os.environ.get("DATABASE_URL_TEST"):
-    os.environ["DATABASE_URL_TEST"] = SQLALCHEMY_DATABASE_URL
-
-engine = create_engine(
-    os.environ.get("DATABASE_URL_TEST"), connect_args={"check_same_thread": False}
-)
+engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL, connect_args={"check_same_thread": False}
+                       )
 TestingSessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine)
 
@@ -48,7 +42,6 @@ def test_create_employee(setup_database):
         "fio": "John Doe",
     }
     response = client.post("/employees/", json=employee_data)
-    print(response.json())
     assert response.status_code == 200
     data = response.json()
     assert data["fio"] == employee_data["fio"]
@@ -62,31 +55,25 @@ def test_create_employee(setup_database):
 
 
 def test_read_employees(setup_database):
-    # 1. Создаем несколько сотрудников в базе данных
+    # Создаем несколько сотрудников в базе данных
     db = TestingSessionLocal()
-    employee1 = models.Employee(fio="John Doe")
-    employee2 = models.Employee(fio="Jane Smith")
-    db.add_all([employee1, employee2])
+    employees = [models.Employee(fio="John Doe"),
+                 models.Employee(fio="Jane Smith")]
+    db.add_all(employees)
     db.commit()
 
-    # 2. Отправляем GET-запрос на эндпоинт /employees/
+    # Отправляем GET-запрос на эндпоинт /employees/
     response = client.get("/employees/")
 
-    # 3. Проверяем статус код и содержимое ответа
+    # Проверяем статус код и содержимое ответа
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 2  # Ожидаем, что в ответе будет 2 сотрудника
+    assert len(data) == len(employees)
 
-    # 4. Проверяем данные сотрудников в ответе
-    employee_data_1 = next(
-        (item for item in data if item["fio"] == "John Doe"), None)
-    employee_data_2 = next(
-        (item for item in data if item["fio"] == "Jane Smith"), None)
-
-    assert employee_data_1 is not None
-    assert employee_data_2 is not None
-
-    assert employee_data_1["fio"] == "John Doe"
-    assert "id" in employee_data_1
-    assert employee_data_2["fio"] == "Jane Smith"
-    assert "id" in employee_data_2
+    # Проверяем данные сотрудников в ответе
+    for emp in employees:
+        emp_data = next(
+            (item for item in data if item["fio"] == emp.fio), None)
+        assert emp_data is not None
+        assert emp_data["fio"] == emp.fio
+        assert "id" in emp_data

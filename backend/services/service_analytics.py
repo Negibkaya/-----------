@@ -1,7 +1,5 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from datetime import timedelta
-
 from models import Employee, BusinessTrip, Expense, ExpenseType
 
 

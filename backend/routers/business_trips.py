@@ -13,12 +13,14 @@ router = APIRouter(
 
 @router.get("/", response_model=list[schemas.BusinessTrip])
 def read_business_trips(db: Session = Depends(get_db)):
+    """Получает список всех поездок."""
     business_trips = db.query(models.BusinessTrip).all()
     return business_trips
 
 
 @router.get("/{business_trips_id}", response_model=schemas.BusinessTrip)
 def read_business_trips(business_trips_id: int, db: Session = Depends(get_db)):
+    """Получает поездку по ID."""
     db_business_trip = db.query(models.BusinessTrip).filter(
         models.BusinessTrip.id == business_trips_id).first()
     if not db_business_trip:
@@ -28,6 +30,7 @@ def read_business_trips(business_trips_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=schemas.BusinessTrip)
 def create_business_trip(business_trip: schemas.BusinessTripCreate, db: Session = Depends(get_db)):
+    """Создает новую поездку."""
     db_business_trip = models.BusinessTrip(**business_trip.dict())
     db.add(db_business_trip)
     db.commit()
@@ -37,6 +40,7 @@ def create_business_trip(business_trip: schemas.BusinessTripCreate, db: Session 
 
 @router.put("/{business_trips_id}", response_model=schemas.BusinessTrip)
 def update_business_trips(business_trips_id: int, business_trip: schemas.BusinessTripUpdate, db: Session = Depends(get_db)):
+    """Обновляет данные поездки."""
     db_business_trip = db.query(models.BusinessTrip).filter(
         models.BusinessTrip.id == business_trips_id).first()
     if not db_business_trip:
@@ -51,6 +55,7 @@ def update_business_trips(business_trips_id: int, business_trip: schemas.Busines
 
 @router.delete("/{business_trips_id}")
 def delete_business_trips(business_trips_id: int, db: Session = Depends(get_db)):
+    """Удаляет поездку."""
     db_business_trip = db.query(models.BusinessTrip).filter(
         models.BusinessTrip.id == business_trips_id).first()
     if not db_business_trip:

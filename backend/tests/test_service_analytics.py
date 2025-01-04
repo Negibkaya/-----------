@@ -10,7 +10,7 @@ from services.service_analytics import (
     get_most_popular_destinations,
     get_average_expense_per_trip,
 )
-from models import Base, Employee, BusinessTrip, Expense, ExpenseType
+from models import Base
 from pytest_mock import MockerFixture
 
 # Создаем тестовую базу данных в памяти
@@ -37,23 +37,23 @@ def db_session():
 
 
 def test_get_total_expenses(db_session, mocker: MockerFixture):
-    # Мокаем запрос к БД, чтобы он возвращал предопределенное значение
+    # Мокаем query у Session
     mock_query = mocker.patch.object(db_session, "query")
     mock_query.return_value.scalar.return_value = 150.5
 
     result = get_total_expenses(db_session)
     assert result == 150.5
-    mock_query.assert_called_once()
+    mock_query.return_value.scalar.assert_called_once()
 
 
 def test_get_total_expenses_empty(db_session, mocker: MockerFixture):
-    # Мокаем запрос к БД, чтобы он возвращал None (как будто расходов нет)
+    # Мокаем query у Session
     mock_query = mocker.patch.object(db_session, "query")
     mock_query.return_value.scalar.return_value = None
 
     result = get_total_expenses(db_session)
     assert result == 0.0
-    mock_query.assert_called_once()
+    mock_query.return_value.scalar.assert_called_once()
 
 
 def test_get_expenses_by_employee(db_session, mocker: MockerFixture):
@@ -62,13 +62,14 @@ def test_get_expenses_by_employee(db_session, mocker: MockerFixture):
         ("Иванов И.И.", 250.0),
         ("Петров П.П.", 100.0),
     ]
-    # Мокаем запрос к БД
+
+    # Мокаем query у Session
     mock_query = mocker.patch.object(db_session, "query")
     mock_query.return_value.join.return_value.join.return_value.group_by.return_value.all.return_value = mock_result
 
     result = get_expenses_by_employee(db_session)
     assert result == mock_result
-    mock_query.assert_called_once()
+    mock_query.return_value.join.return_value.join.return_value.group_by.return_value.all.assert_called_once()
 
 
 def test_get_expenses_by_expense_type(db_session, mocker: MockerFixture):
@@ -76,12 +77,14 @@ def test_get_expenses_by_expense_type(db_session, mocker: MockerFixture):
         ("Проживание", 300.0),
         ("Питание", 150.0),
     ]
+
+    # Мокаем query у Session
     mock_query = mocker.patch.object(db_session, "query")
     mock_query.return_value.join.return_value.group_by.return_value.all.return_value = mock_result
 
     result = get_expenses_by_expense_type(db_session)
     assert result == mock_result
-    mock_query.assert_called_once()
+    mock_query.return_value.join.return_value.group_by.return_value.all.assert_called_once()
 
 
 def test_get_employees_with_most_trips(db_session, mocker: MockerFixture):
@@ -89,12 +92,14 @@ def test_get_employees_with_most_trips(db_session, mocker: MockerFixture):
         ("Сидоров С.С.", 5),
         ("Иванов И.И.", 3),
     ]
+
+    # Мокаем query у Session
     mock_query = mocker.patch.object(db_session, "query")
     mock_query.return_value.join.return_value.group_by.return_value.order_by.return_value.limit.return_value.all.return_value = mock_result
 
     result = get_employees_with_most_trips(db_session, limit=2)
     assert result == mock_result
-    mock_query.assert_called_once()
+    mock_query.return_value.join.return_value.group_by.return_value.order_by.return_value.limit.return_value.all.assert_called_once()
 
 
 def test_get_most_popular_destinations(db_session, mocker: MockerFixture):
@@ -102,31 +107,33 @@ def test_get_most_popular_destinations(db_session, mocker: MockerFixture):
         ("Москва", 10),
         ("Санкт-Петербург", 8),
     ]
+
+    # Мокаем query у Session
     mock_query = mocker.patch.object(db_session, "query")
     mock_query.return_value.group_by.return_value.order_by.return_value.limit.return_value.all.return_value = mock_result
 
     result = get_most_popular_destinations(db_session, limit=2)
     assert result == mock_result
-    mock_query.assert_called_once()
+    mock_query.return_value.group_by.return_value.order_by.return_value.limit.return_value.all.assert_called_once()
 
 
 def test_get_average_expense_per_trip(db_session, mocker: MockerFixture):
+    # Мокаем query у Session
     mock_query = mocker.patch.object(db_session, "query")
-    mock_subquery = mocker.MagicMock()  # Используем MagicMock для subquery
-    mock_query.return_value.join.return_value.group_by.return_value.subquery.return_value = mock_subquery
     mock_query.return_value.scalar.return_value = 200.0
 
     result = get_average_expense_per_trip(db_session)
     assert result == 200.0
-    mock_query.assert_called()  # Проверяем, что query был вызван
+    # Проверяем, что scalar был вызван именно у запроса среднего значения
+    mock_query.return_value.scalar.assert_called_once()
 
 
 def test_get_average_expense_per_trip_empty(db_session, mocker: MockerFixture):
+    # Мокаем query у Session
     mock_query = mocker.patch.object(db_session, "query")
-    mock_subquery = mocker.MagicMock()
-    mock_query.return_value.join.return_value.group_by.return_value.subquery.return_value = mock_subquery
     mock_query.return_value.scalar.return_value = None
 
     result = get_average_expense_per_trip(db_session)
     assert result == 0.0
-    mock_query.assert_called()
+    # Проверяем, что scalar был вызван именно у запроса среднего значения
+    mock_query.return_value.scalar.assert_called_once()
