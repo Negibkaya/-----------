@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import { useState, useEffect } from "react";
 import axios from "axios";
 import {
@@ -9,6 +8,11 @@ import {
   Card,
   CardContent,
   CardHeader,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import {
   BarChart,
@@ -26,40 +30,6 @@ import {
   Treemap,
 } from "recharts";
 
-// Total Expenses: 64800
-
-// Expenses by Employee:
-// (4) [{…}, {…}, {…}, {…}, {…}]
-// 0: {employee: 'Иванов Иван Иванович', total_expenses: 20700}
-// 1: {employee: 'Петров Петр Петрович', total_expenses: 14100}
-// 2: {employee: 'Сидоров Сидор Сидорович', total_expenses: 16600}
-// 3: {employee: 'Смирнова Анна Ивановна', total_expenses: 13400}
-
-// Expenses by Expense Type:
-// (5) [{…}, {…}, {…}, {…}, {…}]
-// 0: {expense_type: 'Ega', total_expenses: 27500}
-// 1: {expense_type: 'Питание', total_expenses: 10500}
-// 2: {expense_type: 'npoesA', total_expenses: 8800}
-// 3: {expense_type: 'Проживание', total_expenses: 17500}
-// 4: {expense_type: 'Суточны', total_expenses: 500}
-
-// Employees with Most Trips:
-// (4) [{…}, {…}, {…}, {…}, {…}]
-// 0: {employee: 'Иванов Иван Иванович', trip_count: 2}
-// 1: {employee: 'Смирнова Анна Ивановна', trip_count: 1}
-// 2: {employee: 'Сидоров Сидор Сидорович', trip_count: 1}
-// З: {employee: 'Петров Петр Петрович', trip_count: 1}
-
-// Most Popular Destinations:
-// (5) [{…}, {…}, {…}, {…}, {…}]
-// 0: {destination: 'Санкт-Петербург', trip_count: 1}
-// 1: {destination: 'Новосибирск', trip_count: 1}
-// 2: {destination: 'MockBa', trip_count: 1}
-// 3: {destination: 'Ka3aHb', trip_count: 1}
-// 4: {destination: 'Екатеринбург', trip_count: 1}
-
-// Average Expense per Trip: 12960
-
 const AnalyticsPage = () => {
   const [totalExpenses, setTotalExpenses] = useState(null);
   const [expensesByEmployee, setExpensesByEmployee] = useState(null);
@@ -69,42 +39,58 @@ const AnalyticsPage = () => {
   const [averageExpensePerTrip, setAverageExpensePerTrip] = useState(null);
 
   const [loading, setLoading] = useState(true);
+  const [selectedReportType, setSelectedReportType] = useState("text");
+  const [selectedDataType, setSelectedDataType] = useState("all");
 
   const fetchAnalyticsData = async () => {
     setLoading(true);
-
-    const cachedAnalyticsData = sessionStorage.getItem("analyticsData");
-
-    if (cachedAnalyticsData) {
-      console.log("Данные аналитики взяты из кэша");
-      const data = JSON.parse(cachedAnalyticsData);
-      setTotalExpenses(data.total_expenses);
-      setExpensesByEmployee(data.expenses_by_employee);
-      setExpensesByExpenseType(data.expenses_by_expense_type);
-      setEmployeesWithMostTrips(data.employees_with_most_trips);
-      setMostPopularDestinations(data.most_popular_destinations);
-      setAverageExpensePerTrip(data.average_expense_per_trip);
-      setLoading(false);
-      return;
-    }
 
     try {
       const response = await axios.get(
         "http://localhost:8000/analytics/all_analytics"
       );
       const data = response.data;
+
       setTotalExpenses(data.total_expenses);
       setExpensesByEmployee(data.expenses_by_employee);
       setExpensesByExpenseType(data.expenses_by_expense_type);
       setEmployeesWithMostTrips(data.employees_with_most_trips);
       setMostPopularDestinations(data.most_popular_destinations);
       setAverageExpensePerTrip(data.average_expense_per_trip);
-      sessionStorage.setItem("analyticsData", JSON.stringify(data));
-      console.log("Данные аналитики загружены с сервера и закэшированы");
+
+      console.log("Данные аналитики загружены с сервера");
     } catch (error) {
       console.error("Error fetching analytics data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, []);
+
+  const handleDownloadReport = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:8000/analytics/report/${selectedReportType}/${selectedDataType}`,
+        { responseType: "blob" }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      if (selectedReportType === "text") {
+        link.setAttribute("download", "report.txt");
+      } else if (selectedReportType === "json") {
+        link.setAttribute("download", "report.json");
+      }
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading report:", error);
     }
   };
 
@@ -157,6 +143,62 @@ const AnalyticsPage = () => {
     "#FF19A3",
   ];
 
+  const downloadReportSection = (
+    <Card>
+      <CardHeader title="Скачать отчеты" />
+      <CardContent>
+        <FormControl style={{ marginRight: 20, minWidth: 120 }}>
+          <InputLabel id="report-type-label">Тип отчета</InputLabel>
+          <Select
+            labelId="report-type-label"
+            value={selectedReportType}
+            label="Тип отчета"
+            onChange={(e) => setSelectedReportType(e.target.value)}
+          >
+            <MenuItem value="text">Text</MenuItem>
+            <MenuItem value="json">JSON</MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl style={{ marginRight: 20, minWidth: 200 }}>
+          <InputLabel id="data-type-label">Данные</InputLabel>
+          <Select
+            labelId="data-type-label"
+            value={selectedDataType}
+            label="Данные"
+            onChange={(e) => setSelectedDataType(e.target.value)}
+          >
+            <MenuItem value="all">Все данные</MenuItem>
+            <MenuItem value="total_expenses">Общие расходы</MenuItem>
+            <MenuItem value="expenses_by_employee">
+              Расходы по сотрудникам
+            </MenuItem>
+            <MenuItem value="expenses_by_expense_type">
+              Расходы по типам
+            </MenuItem>
+            <MenuItem value="employees_with_most_trips">
+              Сотрудники с большим количеством поездок
+            </MenuItem>
+            <MenuItem value="most_popular_destinations">
+              Самые частые направления
+            </MenuItem>
+            <MenuItem value="average_expense_per_trip">
+              Средние расходы на поездку
+            </MenuItem>
+          </Select>
+        </FormControl>
+
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleDownloadReport}
+        >
+          Скачать
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <Box sx={{ padding: 4 }}>
       <Typography variant="h4" gutterBottom>
@@ -164,7 +206,7 @@ const AnalyticsPage = () => {
       </Typography>
 
       <Grid container spacing={4}>
-        {/* Общие расходы и Средний расход на поездку - без изменений */}
+        {/* Общие расходы и Средний расход на поездку */}
         <Grid item xs={12} md={6}>
           <Card>
             <CardHeader title="Общие расходы" />
@@ -201,7 +243,6 @@ const AnalyticsPage = () => {
                   ratio={4 / 3}
                   stroke="#fff"
                   fill="#8884d8"
-                  content={<CustomizedContent colors={COLORS} />}
                 >
                   <Tooltip />
                 </Treemap>
@@ -210,7 +251,7 @@ const AnalyticsPage = () => {
           </Card>
         </Grid>
 
-        {/* График: Расходы по категориям - без изменений */}
+        {/* График: Расходы по категориям */}
         <Grid item xs={12} md={6}>
           <Card>
             <CardHeader title="Расходы по категориям" />
@@ -298,50 +339,13 @@ const AnalyticsPage = () => {
             </CardContent>
           </Card>
         </Grid>
+
+        {/* Секция для скачивания отчетов */}
+        <Grid item xs={12}>
+          {downloadReportSection}
+        </Grid>
       </Grid>
     </Box>
-  );
-};
-
-// Кастомный компонент для отображения лейблов в Treemap
-const CustomizedContent = (props) => {
-  const { root, depth, x, y, width, height, index, colors, name, value } =
-    props;
-
-  return (
-    <g>
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        style={{
-          fill:
-            depth < 2
-              ? colors[Math.floor((index / root.children.length) * 6)]
-              : "none",
-          stroke: "#fff",
-          strokeWidth: 2 / (depth + 1e-10),
-          strokeOpacity: 1 / (depth + 1e-10),
-        }}
-      />
-      {depth === 1 ? (
-        <text
-          x={x + width / 2}
-          y={y + height / 2 + 7}
-          textAnchor="middle"
-          fill="#fff"
-          fontSize={14}
-        >
-          {name}
-        </text>
-      ) : null}
-      {depth === 1 ? (
-        <text x={x + 4} y={y + 18} fill="#fff" fontSize={16} fillOpacity={0.9}>
-          {value}
-        </text>
-      ) : null}
-    </g>
   );
 };
 

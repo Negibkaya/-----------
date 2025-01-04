@@ -4,7 +4,7 @@ from .report_factory import ReportFactory
 
 
 class AnalyticsFacade:
-    def __init__(self, db: Session, report_factory: ReportFactory):
+    def __init__(self, db: Session, report_factory: ReportFactory = None):
         self.db = db
         self.report_factory = report_factory
 
@@ -22,6 +22,8 @@ class AnalyticsFacade:
         average_expense_per_trip = service_analytics.get_average_expense_per_trip(
             self.db)
 
+        average_expense_per_trip = f"{average_expense_per_trip:.2f}"
+
         return {
             "total_expenses": total_expenses,
             "expenses_by_employee": [{"employee": fio, "total_expenses": expenses} for fio, expenses in expenses_by_employee],
@@ -33,6 +35,9 @@ class AnalyticsFacade:
 
     def generate_report(self, data_type: str):
         """Генерирует отчет указанного типа на основе аналитических данных."""
+        if self.report_factory is None:
+            raise ValueError("Report factory is not set")
+
         analytics_data = self.get_all_analytics_data()
         report_data = {}
 

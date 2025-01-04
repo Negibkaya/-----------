@@ -1,3 +1,4 @@
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException
 from database import get_db
@@ -49,7 +50,9 @@ def read_most_popular_destinations(db: Session = Depends(get_db), limit: int = 5
 @router.get("/average_expense_per_trip")
 def read_average_expense_per_trip(db: Session = Depends(get_db)):
     """Получить среднюю сумму расходов на одну командировку."""
-    return service_analytics.get_average_expense_per_trip(db)
+    average_expense_per_trip = service_analytics.get_average_expense_per_trip(
+        db)
+    return f"{average_expense_per_trip:.2f}"
 
 
 @router.get("/all_analytics")
@@ -64,14 +67,22 @@ def generate_report(report_type: str, data_type: str, db: Session = Depends(get_
     """Генерирует отчет указанного типа."""
     if report_type == "text":
         report_factory = TextReportFactory()
+        filename = "report.txt"
+        media_type = "text/plain"
     elif report_type == "json":
         report_factory = JSONReportFactory()
+        filename = "report.json"
+        media_type = "application/json"
     else:
         raise HTTPException(status_code=400, detail="Invalid report type")
 
     facade = analytics_facade.AnalyticsFacade(db, report_factory)
     try:
-        report = facade.generate_report(data_type)
-        return report
+        report_content = facade.generate_report(data_type)
+        return StreamingResponse(
+            [report_content],
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment;filename={filename}"},
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
