@@ -1,31 +1,21 @@
-from fastapi.testclient import TestClient
 import pytest
-from typing import Generator
-from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from main import app  # Замените на фактическое расположение вашего app
+from database import Base, get_db
 
-from database import Base
-from main import app as fastapi_app
 
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///./tests/test_db.db"
 
+engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL,
+                       connect_args={"check_same_thread": False})
 
-engine = create_engine(SQLALCHEMY_TEST_DATABASE_URL, connect_args={
-                       "check_same_thread": False})
 TestingSessionLocal = sessionmaker(
     autocommit=False, autoflush=False, bind=engine)
 
 
-@pytest.fixture(scope="function", autouse=True)
-def create_test_database():
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
-
-
-@pytest.fixture()
-def get_test_db():
+def override_get_db():
     db = TestingSessionLocal()
     try:
         yield db
@@ -33,7 +23,15 @@ def get_test_db():
         db.close()
 
 
-@pytest.fixture()
-def client() -> Generator:
-    with TestClient(fastapi_app) as c:
-        yield c
+app.dependency_overrides[get_db] = override_get_db
+
+client = TestClient(app)
+
+
+@pytest.fixture(scope="function")
+def setup_database():
+    Base.metadata.create_all(bind=engine)
+    db = TestingSessionLocal()
+    yield db
+    db.close()
+    Base.metadata.drop_all(bind=engine)
